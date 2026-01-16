@@ -1,0 +1,4 @@
+notepad .env.local
+NEXT_PUBLIC_SUPABASE_URL=https://wkkffimnocaiaubhyvlb.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_cRua6ltfIAbt1Axx59sVRA_MwVoTLSR
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
