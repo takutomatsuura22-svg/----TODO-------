@@ -112,6 +112,15 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 3. 値を編集して「Save」をクリック
 4. 再デプロイを実行
 
+## 🐛 トラブルシューティング
+
+環境変数に関する問題が発生した場合は、[`ENV_TROUBLESHOOTING.md`](./ENV_TROUBLESHOOTING.md) を参照してください。
+
+よくある問題：
+- Google OAuth認証で404エラーが発生する
+- 環境変数が読み込まれない
+- Supabase URLの形式が正しくない
+
 ## 📚 参考リンク
 
 - [Vercel環境変数のドキュメント](https://vercel.com/docs/concepts/projects/environment-variables)

@@ -4,9 +4,28 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const response = NextResponse.next()
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // 環境変数の検証
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('[AUTH LOGIN] Missing environment variables:', {
+      NEXT_PUBLIC_SUPABASE_URL: Boolean(supabaseUrl),
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: Boolean(supabaseKey),
+    })
+    return NextResponse.redirect(new URL('/login?error=env_missing', request.url))
+  }
+
+  // Supabase URLの形式を検証（https://[project-ref].supabase.co の形式である必要がある）
+  if (!supabaseUrl.match(/^https:\/\/[a-z0-9-]+\.supabase\.co$/)) {
+    console.error('[AUTH LOGIN] Invalid Supabase URL format:', supabaseUrl)
+    console.error('[AUTH LOGIN] Expected format: https://[project-ref].supabase.co')
+    return NextResponse.redirect(new URL('/login?error=invalid_url', request.url))
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {

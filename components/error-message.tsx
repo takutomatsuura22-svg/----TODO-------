@@ -36,6 +36,8 @@ function ErrorMessageContent() {
     no_code: '認証コードが取得できませんでした。',
     get_user_failed: 'ユーザー情報の取得に失敗しました。',
     no_url: '認証URLの取得に失敗しました。',
+    env_missing: '環境変数が設定されていません。.env.localファイルを確認してください。',
+    invalid_url: 'Supabase URLの形式が正しくありません。正しい形式: https://[project-ref].supabase.co',
   }
 
   const message = errorMessages[error] || 'エラーが発生しました。'
