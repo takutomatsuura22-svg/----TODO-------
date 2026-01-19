@@ -5,10 +5,15 @@ import { revalidatePath } from 'next/cache'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  console.log('[AUTH CALLBACK] Callback route called')
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
+  console.log('[AUTH CALLBACK] URL:', requestUrl.toString())
+  console.log('[AUTH CALLBACK] Code:', code ? 'present' : 'missing')
+
   if (!code) {
+    console.error('[AUTH CALLBACK] No code parameter found')
     return NextResponse.redirect(new URL('/login?error=no_code', request.url))
   }
 
@@ -32,17 +37,22 @@ export async function GET(request: NextRequest) {
     }
   )
 
+  console.log('[AUTH CALLBACK] Exchanging code for session...')
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
   if (exchangeError) {
+    console.error('[AUTH CALLBACK] Error exchanging code:', exchangeError)
     return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
   }
+  console.log('[AUTH CALLBACK] Code exchanged successfully')
 
   const { data: { user }, error: getUserError } = await supabase.auth.getUser()
 
   if (getUserError || !user) {
+    console.error('[AUTH CALLBACK] Error getting user:', getUserError)
     return NextResponse.redirect(new URL('/login?error=get_user_failed', request.url))
   }
+  console.log('[AUTH CALLBACK] User retrieved:', user.id, user.email)
 
   // profilesテーブルにupsert
   const profileData = {
@@ -85,6 +95,7 @@ export async function GET(request: NextRequest) {
     redirectUrl = '/pending'
   }
 
+  console.log('[AUTH CALLBACK] Redirecting to:', redirectUrl)
   revalidatePath('/', 'layout')
 
   // Cookieが設定されたレスポンスを使ってリダイレクト
