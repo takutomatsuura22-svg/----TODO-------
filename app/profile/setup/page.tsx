@@ -95,7 +95,6 @@ export default async function ProfileSetupPage() {
             </div>
           )}
           <SubmitButton 
-            formAction={saveProfile}
             className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
             loadingText="保存中...">
             保存
