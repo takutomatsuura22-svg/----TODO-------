@@ -108,6 +108,36 @@ Supabase URLの形式が正しくありません。正しい形式: https://[pro
 
 詳細は [`VERCEL_ENV_SETUP.md`](./VERCEL_ENV_SETUP.md) を参照してください。
 
+### 問題5: Vercelで「Unsupported provider: provider is not enabled」エラーが発生する
+
+**エラーメッセージ:**
+```json
+{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}
+```
+
+**原因:**
+SupabaseでGoogle OAuthプロバイダーが有効になっていないか、設定が不完全です。
+
+**解決方法:**
+
+1. **Supabase DashboardでGoogleプロバイダーを確認**
+   - Supabase Dashboard → Authentication → Providers → Google
+   - **「Enable Google provider」** が **ON** になっているか確認
+   - OFFの場合は、ONにして「Save」をクリック
+
+2. **Google認証情報を確認**
+   - Google Cloud ConsoleでOAuth 2.0 クライアント IDを確認
+   - Client IDとClient Secretをコピー
+   - Supabase Dashboard → Authentication → Providers → Google
+   - Client IDとClient Secretが正しく設定されているか確認
+
+3. **URL Configurationを確認**
+   - Supabase Dashboard → Authentication → URL Configuration
+   - **Site URL** にVercelのURLが設定されているか確認
+   - **Redirect URLs** にVercelのコールバックURLが設定されているか確認
+
+詳細は [`GOOGLE_OAUTH_SETUP.md`](./GOOGLE_OAUTH_SETUP.md) を参照してください。
+
 ## 📋 環境変数のチェックリスト
 
 ### ローカル開発環境

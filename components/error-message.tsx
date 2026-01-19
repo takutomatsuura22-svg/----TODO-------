@@ -38,6 +38,7 @@ function ErrorMessageContent() {
     no_url: '認証URLの取得に失敗しました。',
     env_missing: '環境変数が設定されていません。.env.localファイルを確認してください。',
     invalid_url: 'Supabase URLの形式が正しくありません。正しい形式: https://[project-ref].supabase.co',
+    provider_not_enabled: 'Google OAuthプロバイダーが有効になっていません。Supabase DashboardでGoogleプロバイダーを有効にしてください。',
   }
 
   const message = errorMessages[error] || 'エラーが発生しました。'
@@ -60,6 +61,11 @@ function ErrorMessageContent() {
         </svg>
         <div className="flex-1">
           <p className="text-sm font-medium text-red-800">{message}</p>
+          {error === 'provider_not_enabled' && (
+            <p className="text-xs text-red-600 mt-1">
+              Supabase DashboardでGoogleプロバイダーを有効にしてください。詳細は <code className="bg-red-100 px-1 rounded">GOOGLE_OAUTH_SETUP.md</code> を参照してください。
+            </p>
+          )}
         </div>
         <button
           onClick={() => setIsVisible(false)}

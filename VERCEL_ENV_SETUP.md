@@ -13,6 +13,8 @@
 | `NEXT_PUBLIC_SITE_URL` | アプリケーションのURL | VercelのデプロイURL（例: `https://your-app.vercel.app`） |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabaseのサービスロールキー（監査ログ用） | Supabase Dashboard → Settings → API → service_role key（Revealをクリック） |
 
+**⚠️ 重要**: Google CloudのClient IDとClient Secretは**環境変数には設定しません**。これらは**Supabase Dashboard**で設定します。詳細は [`GOOGLE_CLOUD_CREDENTIALS.md`](./GOOGLE_CLOUD_CREDENTIALS.md) を参照してください。
+
 ## 🚀 Vercelでの設定手順
 
 ### ステップ1: Vercel Dashboardにアクセス
@@ -120,6 +122,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - Google OAuth認証で404エラーが発生する
 - 環境変数が読み込まれない
 - Supabase URLの形式が正しくない
+- Vercelで「Unsupported provider: provider is not enabled」エラーが発生する（[`GOOGLE_OAUTH_SETUP.md`](./GOOGLE_OAUTH_SETUP.md)を参照）
 
 ## 📚 参考リンク
 

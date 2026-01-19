@@ -605,7 +605,15 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **環境変数はVercel Dashboardで管理します。**
 
-詳細な設定手順は [`VERCEL_ENV_SETUP.md`](./VERCEL_ENV_SETUP.md) を参照してください。
+#### 🚀 デプロイ手順
+
+**本番環境用のデータベーステーブルが作成済みの場合：**
+- 📖 [**Vercelデプロイ手順（簡易版）**](./DEPLOY_TO_VERCEL.md) - ステップバイステップのデプロイ手順
+- ✅ [**本番環境設定チェックリスト**](./PRODUCTION_SETUP_CHECKLIST.md) - 設定漏れを防ぐチェックリスト
+
+**詳細な設定手順：**
+- 📝 [**Vercel環境変数設定ガイド**](./VERCEL_ENV_SETUP.md) - 環境変数の詳細な設定方法
+- 📚 [**詳細なデプロイ手順**](./DEPLOYMENT_GUIDE.md) - 包括的なデプロイガイド
 
 Vercel Dashboard → Settings → Environment Variables で以下の4つの環境変数を設定：
 
@@ -743,6 +751,21 @@ npm run dev
 ---
 
 ## 次のステップ
+
+### 本番環境へのデプロイ
+
+本番環境用のデータベーステーブルが作成済みの場合：
+
+1. **Vercelにデプロイ**
+   - 📖 [**Vercelデプロイ手順（簡易版）**](./DEPLOY_TO_VERCEL.md) を参照
+   - ✅ [**本番環境設定チェックリスト**](./PRODUCTION_SETUP_CHECKLIST.md) で設定を確認
+
+2. **リンク発行**
+   - デプロイ完了後、VercelのURLを他の人に共有
+   - 初回ログイン時は承認待ち（`/pending`）になる
+   - 管理者がSupabaseでroleを設定すると、通常の画面が表示される
+
+### 機能拡張
 
 - 管理者によるrole設定機能の実装
 - ロールベースのアクセス制御（RBAC）

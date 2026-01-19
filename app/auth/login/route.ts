@@ -50,6 +50,12 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error('[AUTH LOGIN] Error signing in:', error)
+    
+    // より具体的なエラーメッセージを返す
+    if (error.message?.includes('provider is not enabled') || error.message?.includes('Unsupported provider')) {
+      return NextResponse.redirect(new URL('/login?error=provider_not_enabled', request.url))
+    }
+    
     return NextResponse.redirect(new URL('/login?error=signin_failed', request.url))
   }
 
