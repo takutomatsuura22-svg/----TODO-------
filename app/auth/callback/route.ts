@@ -20,9 +20,20 @@ export async function GET(request: NextRequest) {
   // リクエストに含まれているCookieを確認
   const requestCookies = request.cookies.getAll()
   console.log('[AUTH CALLBACK] Request cookies:', requestCookies.length)
+  let hasPKCECookie = false
   requestCookies.forEach((cookie) => {
-    console.log('[AUTH CALLBACK] Request cookie:', cookie.name, 'value length:', cookie.value?.length || 0)
+    const isPKCE = cookie.name.includes('code-verifier') || cookie.name.includes('auth-token')
+    if (isPKCE) {
+      hasPKCECookie = true
+      console.log('[AUTH CALLBACK] PKCE cookie found:', cookie.name, 'value length:', cookie.value?.length || 0)
+    } else {
+      console.log('[AUTH CALLBACK] Request cookie:', cookie.name, 'value length:', cookie.value?.length || 0)
+    }
   })
+  
+  if (!hasPKCECookie) {
+    console.warn('[AUTH CALLBACK] WARNING: No PKCE cookie found in request!')
+  }
 
   const response = NextResponse.next()
 
@@ -42,15 +53,19 @@ export async function GET(request: NextRequest) {
             request.cookies.set(name, value)
             // Vercelの本番環境ではsecure: trueが必要
             // PKCEコードベリファイアのクッキーは、クロスサイトリクエストでも送信される必要がある
-            const isPKCECookie = name.includes('code-verifier')
-            response.cookies.set(name, value, {
+            const isPKCECookie = name.includes('code-verifier') || name.includes('auth-token')
+            const cookieOptions = {
               path: options?.path || '/',
               sameSite: isPKCECookie && isProduction ? 'none' : ((options?.sameSite as 'lax' | 'strict' | 'none') || 'lax'),
               httpOnly: options?.httpOnly !== false,
-              secure: isProduction ? true : (options?.secure !== false),
+              secure: isPKCECookie && isProduction ? true : (isProduction ? true : (options?.secure !== false)),
               maxAge: options?.maxAge,
               domain: options?.domain,
-            })
+            }
+            response.cookies.set(name, value, cookieOptions)
+            if (isPKCECookie) {
+              console.log('[AUTH CALLBACK] Setting PKCE cookie:', name, 'options:', JSON.stringify(cookieOptions))
+            }
           })
         },
       },
@@ -175,11 +190,12 @@ export async function GET(request: NextRequest) {
   // responseに設定されたCookieをredirectResponseにコピー
   const cookies = response.cookies.getAll()
   cookies.forEach((cookie) => {
+    const isPKCECookie = cookie.name.includes('code-verifier') || cookie.name.includes('auth-token')
     redirectResponse.cookies.set(cookie.name, cookie.value, {
       path: cookie.path || '/',
-      sameSite: (cookie.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+      sameSite: isPKCECookie && isProduction ? 'none' : ((cookie.sameSite as 'lax' | 'strict' | 'none') || 'lax'),
       httpOnly: cookie.httpOnly,
-      secure: isProduction ? true : cookie.secure,
+      secure: isPKCECookie && isProduction ? true : (isProduction ? true : cookie.secure),
       maxAge: cookie.maxAge,
       domain: cookie.domain,
     })

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
             // Vercelの本番環境ではsecure: trueが必要
             const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1'
             // PKCEコードベリファイアのクッキーは、クロスサイトリクエストでも送信される必要がある
-            const isPKCECookie = name.includes('code-verifier')
+            const isPKCECookie = name.includes('code-verifier') || name.includes('auth-token')
             response.cookies.set(name, value, {
               path: options?.path || '/',
               sameSite: isPKCECookie && isProduction ? 'none' : ((options?.sameSite as 'lax' | 'strict' | 'none') || 'lax'),
@@ -50,17 +50,26 @@ export async function GET(request: NextRequest) {
               maxAge: options?.maxAge,
               domain: options?.domain,
             })
+            if (isPKCECookie) {
+              console.log('[AUTH LOGIN] PKCE cookie set:', name, 'sameSite:', isPKCECookie && isProduction ? 'none' : 'lax', 'secure:', isProduction)
+            }
           })
         },
       },
     }
   )
 
+  // 現在のリクエストURLからベースURLを取得
+  const requestUrl = new URL(request.url)
+  const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
+  const redirectTo = `${baseUrl}/auth/callback`
+  
   console.log('[AUTH LOGIN] Initiating OAuth flow...')
+  console.log('[AUTH LOGIN] Redirect URL:', redirectTo)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+      redirectTo: redirectTo,
     },
   })
 
@@ -93,14 +102,16 @@ export async function GET(request: NextRequest) {
     
     // Cookieをコピー（PKCE code verifierを含む）
     cookies.forEach((cookie) => {
+      const isPKCECookie = cookie.name.includes('code-verifier') || cookie.name.includes('auth-token')
       redirectResponse.cookies.set(cookie.name, cookie.value, {
         path: cookie.path || '/',
-        sameSite: (cookie.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+        sameSite: isPKCECookie && isProduction ? 'none' : ((cookie.sameSite as 'lax' | 'strict' | 'none') || 'lax'),
         httpOnly: cookie.httpOnly,
-        secure: isProduction ? true : cookie.secure,
+        secure: isPKCECookie && isProduction ? true : (isProduction ? true : cookie.secure),
         maxAge: cookie.maxAge,
         domain: cookie.domain,
       })
+      console.log('[AUTH LOGIN] Copied cookie to redirect:', cookie.name, 'isPKCE:', isPKCECookie, 'sameSite:', isPKCECookie && isProduction ? 'none' : 'lax')
     })
     
     console.log('[AUTH LOGIN] Redirecting with', cookies.length, 'cookies')
