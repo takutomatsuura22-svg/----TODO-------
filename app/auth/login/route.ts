@@ -34,15 +34,29 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
+          console.log('[AUTH LOGIN] Setting cookies:', cookiesToSet.length)
           cookiesToSet.forEach(({ name, value, options }) => {
+            console.log('[AUTH LOGIN] Setting cookie:', name, 'value length:', value?.length || 0, 'options:', JSON.stringify(options))
             request.cookies.set(name, value)
-            response.cookies.set(name, value, options)
+            // Vercelの本番環境ではsecure: trueが必要
+            const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1'
+            // PKCEコードベリファイアのクッキーは、クロスサイトリクエストでも送信される必要がある
+            const isPKCECookie = name.includes('code-verifier')
+            response.cookies.set(name, value, {
+              path: options?.path || '/',
+              sameSite: isPKCECookie && isProduction ? 'none' : ((options?.sameSite as 'lax' | 'strict' | 'none') || 'lax'),
+              httpOnly: options?.httpOnly !== false,
+              secure: isProduction ? true : (options?.secure !== false),
+              maxAge: options?.maxAge,
+              domain: options?.domain,
+            })
           })
         },
       },
     }
   )
 
+  console.log('[AUTH LOGIN] Initiating OAuth flow...')
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -62,26 +76,37 @@ export async function GET(request: NextRequest) {
   }
 
   if (data.url) {
+    console.log('[AUTH LOGIN] OAuth URL generated, redirecting to:', data.url)
+    
     // responseに設定されたCookieを取得
     const cookies = response.cookies.getAll()
+    console.log('[AUTH LOGIN] Cookies in response:', cookies.length)
+    cookies.forEach((cookie) => {
+      console.log('[AUTH LOGIN] Cookie:', cookie.name, 'value length:', cookie.value?.length || 0)
+    })
     
     // リダイレクトレスポンスを作成
     const redirectResponse = NextResponse.redirect(data.url)
     
-    // Cookieをコピー
+    // 本番環境かどうかを判定
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1'
+    
+    // Cookieをコピー（PKCE code verifierを含む）
     cookies.forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value, {
         path: cookie.path || '/',
         sameSite: (cookie.sameSite as 'lax' | 'strict' | 'none') || 'lax',
         httpOnly: cookie.httpOnly,
-        secure: cookie.secure,
+        secure: isProduction ? true : cookie.secure,
         maxAge: cookie.maxAge,
         domain: cookie.domain,
       })
     })
     
+    console.log('[AUTH LOGIN] Redirecting with', cookies.length, 'cookies')
     return redirectResponse
   }
 
+  console.error('[AUTH LOGIN] No URL returned from signInWithOAuth')
   return NextResponse.redirect(new URL('/login?error=no_url', request.url))
 }

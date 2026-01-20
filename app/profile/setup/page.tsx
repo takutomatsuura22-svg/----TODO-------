@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ErrorMessage } from '@/components/error-message'
-import { SubmitButton } from '@/components/submit-button'
 
 export default async function ProfileSetupPage() {
   const supabase = await createClient()
@@ -94,11 +93,11 @@ export default async function ProfileSetupPage() {
               </select>
             </div>
           )}
-          <SubmitButton 
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-            loadingText="保存中...">
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             保存
-          </SubmitButton>
+          </button>
         </form>
       </div>
     </div>

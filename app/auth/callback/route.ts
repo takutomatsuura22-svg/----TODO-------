@@ -17,7 +17,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=no_code', request.url))
   }
 
+  // リクエストに含まれているCookieを確認
+  const requestCookies = request.cookies.getAll()
+  console.log('[AUTH CALLBACK] Request cookies:', requestCookies.length)
+  requestCookies.forEach((cookie) => {
+    console.log('[AUTH CALLBACK] Request cookie:', cookie.name, 'value length:', cookie.value?.length || 0)
+  })
+
   const response = NextResponse.next()
+
+  // 本番環境かどうかを判定
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1'
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +40,17 @@ export async function GET(request: NextRequest) {
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
-            response.cookies.set(name, value, options)
+            // Vercelの本番環境ではsecure: trueが必要
+            // PKCEコードベリファイアのクッキーは、クロスサイトリクエストでも送信される必要がある
+            const isPKCECookie = name.includes('code-verifier')
+            response.cookies.set(name, value, {
+              path: options?.path || '/',
+              sameSite: isPKCECookie && isProduction ? 'none' : ((options?.sameSite as 'lax' | 'strict' | 'none') || 'lax'),
+              httpOnly: options?.httpOnly !== false,
+              secure: isProduction ? true : (options?.secure !== false),
+              maxAge: options?.maxAge,
+              domain: options?.domain,
+            })
           })
         },
       },
@@ -108,7 +128,7 @@ export async function GET(request: NextRequest) {
       path: cookie.path || '/',
       sameSite: (cookie.sameSite as 'lax' | 'strict' | 'none') || 'lax',
       httpOnly: cookie.httpOnly,
-      secure: cookie.secure,
+      secure: isProduction ? true : cookie.secure,
       maxAge: cookie.maxAge,
       domain: cookie.domain,
     })

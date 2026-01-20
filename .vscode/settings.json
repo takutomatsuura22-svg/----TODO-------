@@ -1,0 +1,10 @@
+{
+  "git.terminalAuthentication": false,
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.autofetch": false,
+  "terminal.integrated.automationProfile.windows": {
+    "path": "powershell.exe"
+  },
+  "terminal.integrated.enablePersistentSessions": false
+}
