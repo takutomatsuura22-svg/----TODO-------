@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { ErrorMessage } from '@/components/error-message'
 
 export default async function ProfileSetupPage() {
@@ -20,8 +21,8 @@ export default async function ProfileSetupPage() {
   // 生徒の場合はnameとgradeの両方が必要、教員・管理者の場合はnameのみ必要
   const isStudent = profile?.role === 'student'
   const isProfileComplete = isStudent
-    ? profile?.name && profile?.grade
-    : profile?.name
+    ? profile?.name && profile?.grade && profile.grade.trim() !== ''
+    : profile?.name && profile.name.trim() !== ''
 
   if (isProfileComplete) {
     if (!profile?.role) {
@@ -106,17 +107,23 @@ export default async function ProfileSetupPage() {
 
 async function saveProfile(formData: FormData) {
   'use server'
+  console.log('[PROFILE SETUP] Save profile called')
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
+    console.error('[PROFILE SETUP] No user found')
     redirect('/login')
   }
 
-  const name = formData.get('name') as string
-  const grade = formData.get('grade') as string
+  const name = (formData.get('name') as string)?.trim()
+  const grade = (formData.get('grade') as string)?.trim() || null
+
+  console.log('[PROFILE SETUP] Form data:', { name, grade, userId: user.id })
 
   if (!name) {
+    console.error('[PROFILE SETUP] Name is required')
     redirect('/profile/setup?error=validation_error')
   }
 
@@ -127,34 +134,54 @@ async function saveProfile(formData: FormData) {
     .eq('id', user.id)
     .single()
 
+  console.log('[PROFILE SETUP] Current profile role:', currentProfile?.role)
+
   if (currentProfile?.role === 'student' && !grade) {
+    console.error('[PROFILE SETUP] Grade is required for students')
     redirect('/profile/setup?error=validation_error')
   }
 
-  const { error } = await supabase
+  // 更新データを準備（空文字列の場合はnullに変換）
+  const updateData: { name: string; grade: string | null; updated_at: string } = {
+    name,
+    grade: grade || null,
+    updated_at: new Date().toISOString(),
+  }
+
+  console.log('[PROFILE SETUP] Updating profile with:', updateData)
+
+  const { error, data } = await supabase
     .from('profiles')
-    .update({
-      name,
-      grade,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', user.id)
+    .select()
 
   if (error) {
-    console.error('Error updating profile:', error)
+    console.error('[PROFILE SETUP] Error updating profile:', error)
     redirect('/profile/setup?error=save_failed')
   }
+
+  console.log('[PROFILE SETUP] Profile updated successfully:', data)
+
+  // キャッシュをクリア
+  revalidatePath('/profile/setup')
+  revalidatePath('/')
+  revalidatePath('/pending')
 
   // プロフィール保存後、roleを確認してリダイレクト
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, name, grade')
     .eq('id', user.id)
     .single()
 
+  console.log('[PROFILE SETUP] Profile after update:', profile)
+
   if (!profile?.role) {
+    console.log('[PROFILE SETUP] Redirecting to /pending (no role)')
     redirect('/pending')
   } else {
+    console.log('[PROFILE SETUP] Redirecting to / (profile complete)')
     redirect('/')
   }
 }
