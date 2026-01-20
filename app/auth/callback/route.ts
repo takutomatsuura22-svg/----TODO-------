@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=get_user_failed', request.url))
   }
   console.log('[AUTH CALLBACK] User retrieved:', user.id, user.email)
+  console.log('[AUTH CALLBACK] User metadata:', JSON.stringify(user.user_metadata))
 
   // profilesテーブルにupsert
   const profileData = {
@@ -81,38 +82,88 @@ export async function GET(request: NextRequest) {
     name: user.user_metadata?.full_name || user.user_metadata?.name || null,
   }
   
-  const { error: upsertError } = await supabase
+  console.log('[AUTH CALLBACK] Attempting to upsert profile:', profileData)
+  
+  const { data: upsertData, error: upsertError } = await supabase
     .from('profiles')
     .upsert(profileData, {
       onConflict: 'id',
     })
+    .select()
 
   if (upsertError) {
     console.error('[AUTH CALLBACK] Error upserting profile:', upsertError)
+    console.error('[AUTH CALLBACK] Error details:', {
+      code: upsertError.code,
+      message: upsertError.message,
+      details: upsertError.details,
+      hint: upsertError.hint,
+    })
+    // エラーが発生しても続行（既にプロフィールが存在する可能性がある）
+  } else {
+    console.log('[AUTH CALLBACK] Profile upserted successfully:', upsertData)
   }
 
-  // プロフィールの状態を確認
-  const { data: profile } = await supabase
+  // プロフィールの状態を確認（upsertが失敗した場合でも確認）
+  const { data: profile, error: selectError } = await supabase
     .from('profiles')
-    .select('role, name, grade')
+    .select('role, name, grade, email')
     .eq('id', user.id)
     .single()
+
+  let finalProfile = profile
+
+  if (selectError) {
+    console.error('[AUTH CALLBACK] Error selecting profile:', selectError)
+    // プロフィールが存在しない場合は、再度insertを試みる
+    console.log('[AUTH CALLBACK] Profile not found, attempting insert...')
+    const { data: insertData, error: insertError } = await supabase
+      .from('profiles')
+      .insert(profileData)
+      .select()
+    
+    if (insertError) {
+      console.error('[AUTH CALLBACK] Error inserting profile:', insertError)
+      console.error('[AUTH CALLBACK] Insert error details:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+      })
+      // プロフィール作成に失敗した場合でも、プロフィール設定ページにリダイレクト
+      finalProfile = null
+    } else {
+      console.log('[AUTH CALLBACK] Profile inserted successfully:', insertData)
+      finalProfile = insertData?.[0] || null
+    }
+  } else {
+    console.log('[AUTH CALLBACK] Profile found:', finalProfile)
+  }
 
   // リダイレクト先を決定
   let redirectUrl = '/'
   
-  // プロフィール未設定の場合は初回プロフィール設定へ
-  // 生徒の場合はnameとgradeの両方が必要、教員・管理者の場合はnameのみ必要
-  const isStudent = profile?.role === 'student'
-  const needsProfileSetup = isStudent
-    ? !profile?.name || !profile?.grade
-    : !profile?.name
-
-  if (needsProfileSetup) {
+  // プロフィールが存在しない、または未設定の場合は初回プロフィール設定へ
+  if (!finalProfile) {
+    console.log('[AUTH CALLBACK] No profile found, redirecting to setup')
     redirectUrl = '/profile/setup'
-  } else if (!profile?.role) {
-    // roleが未設定の場合は承認待ちへ
-    redirectUrl = '/pending'
+  } else {
+    // 生徒の場合はnameとgradeの両方が必要、教員・管理者の場合はnameのみ必要
+    const isStudent = finalProfile.role === 'student'
+    const needsProfileSetup = isStudent
+      ? !finalProfile.name || !finalProfile.grade
+      : !finalProfile.name
+
+    if (needsProfileSetup) {
+      console.log('[AUTH CALLBACK] Profile incomplete, redirecting to setup')
+      redirectUrl = '/profile/setup'
+    } else if (!finalProfile.role) {
+      // roleが未設定の場合は承認待ちへ
+      console.log('[AUTH CALLBACK] No role assigned, redirecting to pending')
+      redirectUrl = '/pending'
+    } else {
+      console.log('[AUTH CALLBACK] Profile complete, redirecting to home')
+    }
   }
 
   console.log('[AUTH CALLBACK] Redirecting to:', redirectUrl)
